@@ -3,6 +3,7 @@
 ***参考自：[https://github.com/nicedayzhu/netAssist](https://github.com/nicedayzhu/netAssist)***
 
 在jvm上运行的跨平台网络调试助手
+![https://github.com/nicedayzhu/netAssist/raw/master/screenshot/shot.jpg](https://github.com/nicedayzhu/netAssist/raw/master/screenshot/shot.jpg)
 
 ##  运行环境
 含有javafx的jre8
