@@ -25,12 +25,10 @@ class MainStyles : Stylesheet() {
         choiceBox {
             fontSize = 12.px
         }
-        fieldset {
-            fontSize = 12.px
-        }
-        formBlockPanel{
-            backgroundColor += Color.AQUA
-            padding = box(8.0.px)
+        formBlockPanel {
+            backgroundColor += Color.web("#e8e8e8")
+            backgroundRadius += box(4.0.px)
+            padding = box(12.0.px)
         }
     }
 }

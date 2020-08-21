@@ -35,6 +35,7 @@ application {
 dependencies {
     implementation(kotlin("stdlib-jdk8"))
     implementation("no.tornado:tornadofx:1.7.20")
+    implementation("io.netty:netty-all:4.1.51.Final")
     testImplementation("junit:junit:4.12")
 }
 
