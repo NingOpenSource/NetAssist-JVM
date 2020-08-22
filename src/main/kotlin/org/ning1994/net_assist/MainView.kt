@@ -8,13 +8,14 @@ import javafx.geometry.Orientation
 import javafx.geometry.Pos
 import javafx.scene.layout.Priority
 import javafx.util.StringConverter
+import org.ning1994.net_assist.core.ServiceStatus
 import org.ning1994.net_assist.core.SocketProtocol
 import org.ning1994.net_assist.widget.simpleTextfield
 import tornadofx.*
 
 class MainView : View("NetAssist", NetAssist.loadIcon()) {
-    companion object{
-        val viewModel=MainViewModel()
+    companion object {
+        val viewModel = MainViewModel()
     }
 
     init {
@@ -44,7 +45,7 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                 label("协议类型")
                                 choicebox(viewModel.socketProtocol, viewModel.socketProtocolList) {
                                     fitToParentWidth()
-                                    this.converter = object : StringConverter<SocketProtocol>() {
+                                    converter = object : StringConverter<SocketProtocol>() {
 
                                         override fun toString(`object`: SocketProtocol?): String = `object`?.displayName
                                             ?: ""
@@ -52,13 +53,20 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                         override fun fromString(string: String?): SocketProtocol =
                                             viewModel.socketProtocolList.find { it.displayName == string }!!
                                     }
+                                    viewModel.serviceStatus.addListener { _, _, newValue ->
+                                        isDisable = newValue == ServiceStatus.idle
+                                    }
                                 }
                                 label("远程IP地址")
                                 textfield(viewModel.ip)
                                 label("远程端口号")
                                 simpleTextfield(viewModel.port)
                                 hbox(8) {
-                                    button("开始监听")
+                                    button("开始监听"){
+                                        setOnAction {
+                                            viewModel.start()
+                                        }
+                                    }
                                     button("断开")
                                 }
                             }
@@ -72,8 +80,13 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                 checkbox("16进制显示")
                                 checkbox("暂停显示")
                                 hbox(8) {
-                                    button("保存数据")
-                                    button("清空显示")
+                                    fitToParentWidth()
+                                    button("保存数据") {
+                                        hgrow = Priority.ALWAYS
+                                    }
+                                    button("清空显示") {
+                                        hgrow = Priority.ALWAYS
+                                    }
                                 }
                             }
                         }
@@ -127,10 +140,10 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                             addClass(MainStyles.formBlockPanel)
                             viewModel.socketProtocol.addListener { _, _, protocol ->
                                 isVisible = protocol == SocketProtocol.tcpServer
-                                isManaged=isVisible
+                                isManaged = isVisible
                             }
                             isVisible = viewModel.socketProtocol.value == SocketProtocol.tcpServer
-                            isManaged=isVisible
+                            isManaged = isVisible
                             choicebox(viewModel.remoteClientInfo, viewModel.remoteClientInfoList) {
                                 fitToParentWidth()
                             }
@@ -139,10 +152,10 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                             addClass(MainStyles.formBlockPanel)
                             viewModel.socketProtocol.addListener { _, _, protocol ->
                                 isVisible = protocol == SocketProtocol.tcpClient
-                                isManaged=isVisible
+                                isManaged = isVisible
                             }
                             isVisible = viewModel.socketProtocol.value == SocketProtocol.tcpClient
-                            isManaged=isVisible
+                            isManaged = isVisible
                             choicebox(viewModel.remoteClientInfo, viewModel.remoteClientInfoList) {
                                 fitToParentWidth()
                             }
@@ -151,19 +164,19 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                             addClass(MainStyles.formBlockPanel)
                             viewModel.socketProtocol.addListener { _, _, protocol ->
                                 isVisible = protocol == SocketProtocol.udp
-                                isManaged=isVisible
+                                isManaged = isVisible
                             }
                             isVisible = viewModel.socketProtocol.value == SocketProtocol.udp
-                            isManaged=isVisible
+                            isManaged = isVisible
                             hbox {
                                 hgrow = Priority.ALWAYS
                                 label("远程IP：")
-                                textfield {  }
+                                textfield { }
                             }
                             hbox {
                                 hgrow = Priority.ALWAYS
                                 label("端口号：")
-                                textfield {  }
+                                textfield { }
                             }
                         }
                     }
