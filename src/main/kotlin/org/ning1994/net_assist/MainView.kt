@@ -6,6 +6,7 @@ import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.geometry.Orientation
 import javafx.geometry.Pos
+import javafx.scene.Node
 import javafx.scene.layout.Priority
 import javafx.util.StringConverter
 import org.ning1994.net_assist.core.ServiceStatus
@@ -18,12 +19,27 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
         val viewModel = MainViewModel()
     }
 
+    private val ip_lable_list = HashMap<SocketProtocol, String>().apply {
+        put(SocketProtocol.tcpServer, "本地IP地址")
+        put(SocketProtocol.tcpClient, "远程IP地址")
+        put(SocketProtocol.udp, "本地IP地址")
+    }
+    private val port_lable_list = HashMap<SocketProtocol, String>().apply {
+        put(SocketProtocol.tcpServer, "本地端口号")
+        put(SocketProtocol.tcpClient, "远程端口号")
+        put(SocketProtocol.udp, "本地端口号")
+    }
+    private val ip_lable = SimpleStringProperty(ip_lable_list[viewModel.socketProtocol.value])
+    private val port_lable = SimpleStringProperty(port_lable_list[viewModel.socketProtocol.value])
+    val inputText=SimpleStringProperty("")
+
     init {
         viewModel.port.addListener { _, _, newValue ->
 //            receiveDataLogs.value += "$newValue\n"
         }
         viewModel.socketProtocol.addListener { _, _, newValue ->
-
+            ip_lable.value = ip_lable_list[newValue]
+            port_lable.value = port_lable_list[newValue]
         }
     }
 
@@ -54,20 +70,39 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                             viewModel.socketProtocolList.find { it.displayName == string }!!
                                     }
                                     viewModel.serviceStatus.addListener { _, _, newValue ->
-                                        isDisable = newValue == ServiceStatus.idle
+                                        isDisable = newValue != ServiceStatus.idle
                                     }
                                 }
-                                label("远程IP地址")
-                                textfield(viewModel.ip)
-                                label("远程端口号")
-                                simpleTextfield(viewModel.port)
+                                label(ip_lable)
+                                textfield(viewModel.ip){
+                                    viewModel.serviceStatus.addListener { _, _, newValue ->
+                                        isDisable = newValue != ServiceStatus.idle
+                                    }
+                                }
+                                label(port_lable)
+                                simpleTextfield(viewModel.port){
+                                    viewModel.serviceStatus.addListener { _, _, newValue ->
+                                        isDisable = newValue != ServiceStatus.idle
+                                    }
+                                }
                                 hbox(8) {
-                                    button("开始监听"){
+                                    button("开始监听") {
+                                        viewModel.serviceStatus.addListener { _, _, newValue ->
+                                            isDisable = newValue != ServiceStatus.idle
+                                        }
                                         setOnAction {
                                             viewModel.start()
                                         }
                                     }
-                                    button("断开")
+                                    button("断开"){
+                                        isDisable=true
+                                        viewModel.serviceStatus.addListener { _, _, newValue ->
+                                            isDisable = newValue != ServiceStatus.running
+                                        }
+                                        setOnAction {
+                                            viewModel.stop()
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -168,27 +203,30 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                             }
                             isVisible = viewModel.socketProtocol.value == SocketProtocol.udp
                             isManaged = isVisible
-                            hbox {
-                                hgrow = Priority.ALWAYS
-                                label("远程IP：")
-                                textfield { }
+                            label("远程IP："){
+                                minWidth=50.0
                             }
-                            hbox {
+                            textfield {
                                 hgrow = Priority.ALWAYS
-                                label("端口号：")
-                                textfield { }
+                            }
+                            label("端口号："){
+                                minWidth=50.0
+                            }
+                            textfield {
+                                hgrow = Priority.ALWAYS
                             }
                         }
                     }
                     fieldset("数据发送") {
                         field {
                             addClass(MainStyles.formBlockPanel)
-                            textarea {
-
-                            }
+                            textarea(inputText)
                             button("数据发送") {
                                 minWidth = 72.0
                                 fitToParentHeight()
+                                setOnAction {
+                                    viewModel.send(inputText.value)
+                                }
                             }
                         }
                     }
@@ -202,16 +240,19 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                     }
                     hbox {
                         hgrow = Priority.ALWAYS
+                        alignment = Pos.CENTER_LEFT
                         label("状态：")
                         text("Ready")
                     }
                     hbox {
                         hgrow = Priority.ALWAYS
+                        alignment = Pos.CENTER_LEFT
                         label("发送计数：")
                         text("0")
                     }
                     hbox {
                         hgrow = Priority.ALWAYS
+                        alignment = Pos.CENTER_LEFT
                         label("接收计数：")
                         text("0")
                     }
@@ -221,5 +262,4 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
             }
         }
     }
-
 }
