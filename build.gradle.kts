@@ -15,8 +15,8 @@ plugins {
     kotlin("jvm") version "1.3.72"
 }
 
-group = "org.jvm"
-version = "1.0-SNAPSHOT"
+group = "org.ning1994.net_assist"
+version = "0.0.1"
 
 
 repositories {
@@ -33,9 +33,9 @@ application {
 }
 
 dependencies {
-    implementation(kotlin("stdlib-jdk8"))
-    implementation("no.tornado:tornadofx:1.7.20")
-    implementation("io.netty:netty-all:4.1.51.Final")
+    api(kotlin("stdlib-jdk8"))
+    api("no.tornado:tornadofx:1.7.20")
+    api("io.netty:netty-all:4.1.51.Final")
     testImplementation("junit:junit:4.12")
 }
 
@@ -49,4 +49,19 @@ tasks {
     compileTestKotlin {
         kotlinOptions.jvmTarget = "1.8"
     }
+    jar{
+        manifest {
+            attributes["Class-Path"]= configurations.compile.get().joinToString(" ") { it.name }
+            attributes["Main-Class"]=application.mainClassName
+        }
+        from(configurations.compile.get().map { entry -> zipTree(entry) }) {
+            exclude(
+                "META-INF/MANIFEST.MF",
+                "META-INF/*.SF",
+                "META-INF/*.DSA",
+                "META-INF/*.RSA")
+        }
+//        from("doc/assets")
+    }
 }
+
