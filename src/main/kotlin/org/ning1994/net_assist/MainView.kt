@@ -1,14 +1,13 @@
 package org.ning1994.net_assist
 
-import javafx.beans.property.SimpleIntegerProperty
-import javafx.beans.property.SimpleListProperty
-import javafx.beans.property.SimpleObjectProperty
+import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.geometry.Orientation
 import javafx.geometry.Pos
 import javafx.scene.Node
 import javafx.scene.layout.Priority
 import javafx.util.StringConverter
+import org.ning1994.net_assist.utils.OSUtil
 import org.ning1994.net_assist.core.ServiceStatus
 import org.ning1994.net_assist.core.SocketProtocol
 import org.ning1994.net_assist.widget.simpleTextfield
@@ -31,9 +30,15 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
     }
     private val ip_lable = SimpleStringProperty(ip_lable_list[viewModel.socketProtocol.value])
     private val port_lable = SimpleStringProperty(port_lable_list[viewModel.socketProtocol.value])
-    val inputText=SimpleStringProperty("")
+    val inputText = SimpleStringProperty("")
+    private val enabledOnServiceRunning=SimpleBooleanProperty(false)
+    private val enabledOnServiceIdle=SimpleBooleanProperty(true)
 
     init {
+        viewModel.serviceStatus.addListener { _,_,newValue->
+            enabledOnServiceRunning.value=newValue==ServiceStatus.running
+            enabledOnServiceIdle.value=newValue==ServiceStatus.idle
+        }
         viewModel.port.addListener { _, _, newValue ->
 //            receiveDataLogs.value += "$newValue\n"
         }
@@ -42,7 +47,6 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
             port_lable.value = port_lable_list[newValue]
         }
     }
-
 
     override val root = vbox {
         vgrow = Priority.ALWAYS
@@ -69,36 +73,25 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                         override fun fromString(string: String?): SocketProtocol =
                                             viewModel.socketProtocolList.find { it.displayName == string }!!
                                     }
-                                    viewModel.serviceStatus.addListener { _, _, newValue ->
-                                        isDisable = newValue != ServiceStatus.idle
-                                    }
+                                    enableWhen(enabledOnServiceIdle)
                                 }
                                 label(ip_lable)
-                                textfield(viewModel.ip){
-                                    viewModel.serviceStatus.addListener { _, _, newValue ->
-                                        isDisable = newValue != ServiceStatus.idle
-                                    }
+                                textfield(viewModel.ip) {
+                                    enableWhen(enabledOnServiceIdle)
                                 }
                                 label(port_lable)
-                                simpleTextfield(viewModel.port){
-                                    viewModel.serviceStatus.addListener { _, _, newValue ->
-                                        isDisable = newValue != ServiceStatus.idle
-                                    }
+                                simpleTextfield(viewModel.port) {
+                                    enableWhen(enabledOnServiceIdle)
                                 }
                                 hbox(8) {
                                     button("开始监听") {
-                                        viewModel.serviceStatus.addListener { _, _, newValue ->
-                                            isDisable = newValue != ServiceStatus.idle
-                                        }
+                                        enableWhen(enabledOnServiceIdle)
                                         setOnAction {
                                             viewModel.start()
                                         }
                                     }
-                                    button("断开"){
-                                        isDisable=true
-                                        viewModel.serviceStatus.addListener { _, _, newValue ->
-                                            isDisable = newValue != ServiceStatus.running
-                                        }
+                                    button("断开") {
+                                        enableWhen(enabledOnServiceRunning)
                                         setOnAction {
                                             viewModel.stop()
                                         }
@@ -131,7 +124,7 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                 hbox(8) {
                                     alignment = Pos.CENTER_LEFT
                                     label("换行符")
-                                    choicebox(viewModel.sendNewlineType, viewModel.sendNewlineTypes)
+                                    choicebox(viewModel.lineSeparatorChar, viewModel.lineSeparatorCharList)
                                 }
                                 checkbox("载入文件")
                                 checkbox("自动发送附加位")
@@ -203,14 +196,14 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                             }
                             isVisible = viewModel.socketProtocol.value == SocketProtocol.udp
                             isManaged = isVisible
-                            label("远程IP："){
-                                minWidth=50.0
+                            label("远程IP：") {
+                                minWidth = 50.0
                             }
                             textfield {
                                 hgrow = Priority.ALWAYS
                             }
-                            label("端口号："){
-                                minWidth=50.0
+                            label("端口号：") {
+                                minWidth = 50.0
                             }
                             textfield {
                                 hgrow = Priority.ALWAYS
@@ -224,8 +217,15 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                             button("数据发送") {
                                 minWidth = 72.0
                                 fitToParentHeight()
+                                enableWhen(enabledOnServiceRunning)
                                 setOnAction {
-                                    viewModel.send(inputText.value)
+                                    var text = inputText.value
+                                    //替换换行符
+                                    text = text.replace(
+                                        OSUtil.LINE_SEPARATOR_CHAR,
+                                        viewModel.lineSeparatorChar.value.value
+                                    )
+                                    viewModel.send(text)
                                 }
                             }
                         }
@@ -261,5 +261,10 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                 }
             }
         }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+
     }
 }

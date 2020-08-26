@@ -13,6 +13,7 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
+import org.ning1994.net_assist.core.LineSeparatorChar
 import org.ning1994.net_assist.core.ServiceStatus
 import org.ning1994.net_assist.core.SingleThreadQueueExecutor
 import org.ning1994.net_assist.core.SocketProtocol
@@ -24,8 +25,14 @@ class MainViewModel {
     val socketProtocol = SimpleObjectProperty<SocketProtocol>(socketProtocolList[0])
     val ip = SimpleStringProperty("127.0.0.1")
     val port = SimpleIntegerProperty(8888)
-    val sendNewlineTypes = arrayListOf("\\n", "\\r\\n", "\\r", "无")
-    val sendNewlineType = SimpleStringProperty(sendNewlineTypes[0])
+    val lineSeparatorCharList = arrayListOf(
+        LineSeparatorChar("\\r\\n", "\r\n"),
+        LineSeparatorChar("\\n", "\n"),
+        LineSeparatorChar("\\r", "\r"),
+        LineSeparatorChar("\\n\\r", "\n\r"),
+        LineSeparatorChar("禁止换行", "")
+    )
+    val lineSeparatorChar = SimpleObjectProperty(lineSeparatorCharList[0])
     val receiveDataLogs = SimpleStringProperty("")
     val periodicSendTimeMS = SimpleIntegerProperty(10)
     val remoteClientInfoList = SimpleListProperty<String>()
