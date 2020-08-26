@@ -2,17 +2,15 @@ package org.ning1994.net_assist
 
 import io.netty.bootstrap.Bootstrap
 import io.netty.bootstrap.ServerBootstrap
-import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.*
 import io.netty.channel.nio.NioEventLoopGroup
+import io.netty.channel.socket.DatagramChannel
 import io.netty.channel.socket.DatagramPacket
 import io.netty.channel.socket.SocketChannel
 import io.netty.channel.socket.nio.NioDatagramChannel
 import io.netty.channel.socket.nio.NioServerSocketChannel
 import io.netty.channel.socket.nio.NioSocketChannel
-import io.netty.handler.codec.DatagramPacketDecoder
-import io.netty.handler.codec.DatagramPacketEncoder
 import io.netty.handler.codec.bytes.ByteArrayDecoder
 import io.netty.handler.codec.bytes.ByteArrayEncoder
 import io.netty.handler.logging.LogLevel
@@ -20,7 +18,6 @@ import io.netty.handler.logging.LoggingHandler
 import javafx.beans.property.*
 import org.ning1994.net_assist.core.LineSeparatorChar
 import org.ning1994.net_assist.core.ServiceStatus
-import org.ning1994.net_assist.core.SingleThreadQueueExecutor
 import org.ning1994.net_assist.core.SocketProtocol
 import org.ning1994.net_assist.utils.HexUtil
 import tornadofx.observableListOf
@@ -101,18 +98,19 @@ class MainViewModel {
     ) {
         rootChannel = ch
         ch?.pipeline()?.apply {
-            addLast(DatagramPacketDecoder(ByteArrayDecoder()))
-            addLast(DatagramPacketEncoder(ByteArrayEncoder()))
-            addLast(object : SimpleChannelInboundHandler<DatagramPacket>() {
-                override fun channelRead0(ctx: ChannelHandlerContext?, msg: DatagramPacket?) {
-                    log(ch, msg?.content()?.array()!!)
-                }
-            })
             addLast(ByteArrayEncoder())
             addLast(ByteArrayDecoder())
             addLast(object : SimpleChannelInboundHandler<ByteArray>() {
                 override fun channelRead0(ctx: ChannelHandlerContext?, msg: ByteArray?) {
-                    log(ch, msg!!)
+                    log(ctx?.channel()!!, msg!!)
+                }
+            })
+            addLast(object : SimpleChannelInboundHandler<DatagramPacket>() {
+                override fun channelRead0(ctx: ChannelHandlerContext?, msg: DatagramPacket?) {
+                    val byteBuf = msg?.content()
+                    val bytes = ByteArray(byteBuf!!.readableBytes())
+                    byteBuf.readBytes(bytes)
+                    log(ch, bytes)
                 }
             })
             addLast(object : LoggingHandler(LogLevel.DEBUG) {
@@ -153,7 +151,9 @@ class MainViewModel {
             } else {
                 ""
             }
-            if (channel is NioServerSocketChannel) {
+            if (channel is DatagramChannel) {
+                receiveDataLogs.value += "[UDP ${channel.localAddress()}]$timeInfo\n$message\n"
+            } else if (channel is NioServerSocketChannel) {
                 receiveDataLogs.value += "[Local ${channel.localAddress()}]$timeInfo\n$message\n"
             } else {
                 receiveDataLogs.value += "[Remote ${channel.remoteAddress()}]$timeInfo\n$message\n"
@@ -228,7 +228,7 @@ class MainViewModel {
                             initRootNettyChannel(ch)
                         }
                     })
-                }.connect(ip.value, port.value)
+                }.bind(ip.value, port.value)
             }
         }
         channelFuture.addListener {

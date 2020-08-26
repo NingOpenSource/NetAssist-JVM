@@ -35,6 +35,7 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
     val inputText = SimpleStringProperty("")
     private val enabledOnServiceRunning = SimpleBooleanProperty(false)
     private val enabledOnServiceIdle = SimpleBooleanProperty(true)
+    private val isClearTextAfterSend = SimpleBooleanProperty(false)
 
     init {
         viewModel.serviceStatus.addListener { _, _, newValue ->
@@ -131,7 +132,7 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                 }
                                 checkbox("载入文件")
                                 checkbox("自动发送附加位")
-                                checkbox("发送完自动清空")
+                                checkbox("发送完自动清空", isClearTextAfterSend)
                                 checkbox("16进制发送", viewModel.isSendHexString)
                                 hbox(8) {
                                     alignment = Pos.CENTER_LEFT
@@ -246,7 +247,13 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                         OSUtil.LINE_SEPARATOR_CHAR,
                                         viewModel.lineSeparatorChar.value.value
                                     )
-                                    viewModel.send(text)
+                                    viewModel.send(text)?.addListener {
+                                        if (isClearTextAfterSend.value) {
+                                            runLater {
+                                                inputText.value = text
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
