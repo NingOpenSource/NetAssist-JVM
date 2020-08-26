@@ -6,12 +6,14 @@ import javafx.geometry.Orientation
 import javafx.geometry.Pos
 import javafx.scene.Node
 import javafx.scene.layout.Priority
+import javafx.stage.FileChooser
 import javafx.util.StringConverter
 import org.ning1994.net_assist.utils.OSUtil
 import org.ning1994.net_assist.core.ServiceStatus
 import org.ning1994.net_assist.core.SocketProtocol
 import org.ning1994.net_assist.widget.simpleTextfield
 import tornadofx.*
+import java.io.File
 
 class MainView : View("NetAssist", NetAssist.loadIcon()) {
     companion object {
@@ -31,13 +33,13 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
     private val ip_lable = SimpleStringProperty(ip_lable_list[viewModel.socketProtocol.value])
     private val port_lable = SimpleStringProperty(port_lable_list[viewModel.socketProtocol.value])
     val inputText = SimpleStringProperty("")
-    private val enabledOnServiceRunning=SimpleBooleanProperty(false)
-    private val enabledOnServiceIdle=SimpleBooleanProperty(true)
+    private val enabledOnServiceRunning = SimpleBooleanProperty(false)
+    private val enabledOnServiceIdle = SimpleBooleanProperty(true)
 
     init {
-        viewModel.serviceStatus.addListener { _,_,newValue->
-            enabledOnServiceRunning.value=newValue==ServiceStatus.running
-            enabledOnServiceIdle.value=newValue==ServiceStatus.idle
+        viewModel.serviceStatus.addListener { _, _, newValue ->
+            enabledOnServiceRunning.value = newValue == ServiceStatus.running
+            enabledOnServiceIdle.value = newValue == ServiceStatus.idle
         }
         viewModel.port.addListener { _, _, newValue ->
 //            receiveDataLogs.value += "$newValue\n"
@@ -104,9 +106,9 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                 addClass(MainStyles.formBlockPanel)
                                 checkbox("保存数据到文件")
                                 checkbox("自动换行显示")
-                                checkbox("显示接收时间")
-                                checkbox("16进制显示")
-                                checkbox("暂停显示")
+                                checkbox("显示接收时间", viewModel.isPrintTimeInfo)
+                                checkbox("16进制显示", viewModel.isPrintHexString)
+                                checkbox("暂停显示", viewModel.isPrintPause)
                                 hbox(8) {
                                     fitToParentWidth()
                                     button("保存数据") {
@@ -114,6 +116,7 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                     }
                                     button("清空显示") {
                                         hgrow = Priority.ALWAYS
+                                        viewModel.receiveDataLogs.value = ""
                                     }
                                 }
                             }
@@ -129,7 +132,7 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                 checkbox("载入文件")
                                 checkbox("自动发送附加位")
                                 checkbox("发送完自动清空")
-                                checkbox("16进制发送")
+                                checkbox("16进制发送", viewModel.isSendHexString)
                                 hbox(8) {
                                     alignment = Pos.CENTER_LEFT
                                     checkbox("周期发送")
@@ -137,8 +140,34 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                     label("ms")
                                 }
                                 hbox(8) {
-                                    button("发送文件")
-                                    button("清空显示")
+                                    button("发送文件") {
+                                        enableWhen(enabledOnServiceRunning)
+                                        setOnAction {
+                                            chooseFile(
+                                                "请选择需要发送的文件（最大支持${Int.MAX_VALUE / 1024 / 1024}MB）",
+                                                filters = arrayOf(/*FileChooser.ExtensionFilter("压缩包", listOf("*.zip"))*/),
+                                                initialDirectory = File(System.getProperty("user.dir")),
+                                                mode = FileChooserMode.Single
+                                            ).apply {
+                                                if (isNotEmpty()) {
+                                                    val file = get(0)
+                                                    if (file.length() <= Int.MAX_VALUE) {
+                                                        viewModel.send(file.readBytes())
+                                                    } else {
+                                                        tooltip("文件过大!") {
+                                                            show(ownerWindow)
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                        }
+                                    }
+                                    button("清空显示") {
+                                        setOnAction {
+                                            inputText.value = ""
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -164,6 +193,10 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                         }
                     }
                     fieldset {
+                        viewModel.socketProtocol.addListener { _, _, protocol ->
+                            isVisible = protocol != SocketProtocol.tcpClient
+                            isManaged = isVisible
+                        }
                         field("客户端：") {
                             addClass(MainStyles.formBlockPanel)
                             viewModel.socketProtocol.addListener { _, _, protocol ->
@@ -171,18 +204,6 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                                 isManaged = isVisible
                             }
                             isVisible = viewModel.socketProtocol.value == SocketProtocol.tcpServer
-                            isManaged = isVisible
-                            choicebox(viewModel.remoteClientInfo, viewModel.remoteClientInfoList) {
-                                fitToParentWidth()
-                            }
-                        }
-                        field("远程主机：") {
-                            addClass(MainStyles.formBlockPanel)
-                            viewModel.socketProtocol.addListener { _, _, protocol ->
-                                isVisible = protocol == SocketProtocol.tcpClient
-                                isManaged = isVisible
-                            }
-                            isVisible = viewModel.socketProtocol.value == SocketProtocol.tcpClient
                             isManaged = isVisible
                             choicebox(viewModel.remoteClientInfo, viewModel.remoteClientInfoList) {
                                 fitToParentWidth()
@@ -199,13 +220,13 @@ class MainView : View("NetAssist", NetAssist.loadIcon()) {
                             label("远程IP：") {
                                 minWidth = 50.0
                             }
-                            textfield {
+                            textfield(viewModel.ipUDP) {
                                 hgrow = Priority.ALWAYS
                             }
                             label("端口号：") {
                                 minWidth = 50.0
                             }
-                            textfield {
+                            simpleTextfield(viewModel.portUDP) {
                                 hgrow = Priority.ALWAYS
                             }
                         }
