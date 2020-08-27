@@ -8,6 +8,7 @@ import javafx.scene.Node
 import javafx.scene.layout.Priority
 import javafx.stage.FileChooser
 import javafx.util.StringConverter
+import org.ning1994.net_assist.core.DescriptionProperties
 import org.ning1994.net_assist.utils.OSUtil
 import org.ning1994.net_assist.core.ServiceStatus
 import org.ning1994.net_assist.core.SocketProtocol
@@ -15,7 +16,8 @@ import org.ning1994.net_assist.widget.simpleTextfield
 import tornadofx.*
 import java.io.File
 
-class MainView : View("NetAssist", NetAssist.loadIcon()) {
+class MainView :
+    View("NetAssist v${NetAssist.getDescription(DescriptionProperties.version_name)}", NetAssist.loadIcon()) {
     companion object {
         val viewModel = MainViewModel()
     }

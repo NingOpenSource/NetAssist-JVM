@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.*
+
 buildscript {
     repositories {
         google {
@@ -15,8 +18,12 @@ plugins {
     kotlin("jvm") version "1.3.72"
 }
 
+val descriptionProperties = Properties().apply {
+    load(FileInputStream(File("src/main/resources/discription.properties")))
+}
+
 group = "org.ning1994.net_assist"
-version = "0.0.1"
+version = descriptionProperties["version.name"]!!
 
 
 repositories {
@@ -42,6 +49,12 @@ dependencies {
 configure<JavaPluginConvention> {
     sourceCompatibility = JavaVersion.VERSION_1_8
 }
+configurations {
+    api {
+        isCanBeResolved = true
+        isCanBeConsumed = true
+    }
+}
 tasks {
     compileKotlin {
         kotlinOptions.jvmTarget = "1.8"
@@ -49,17 +62,18 @@ tasks {
     compileTestKotlin {
         kotlinOptions.jvmTarget = "1.8"
     }
-    jar{
+    jar {
         manifest {
-            attributes["Class-Path"]= configurations.compile.get().joinToString(" ") { it.name }
-            attributes["Main-Class"]=application.mainClassName
+            attributes["Class-Path"] = configurations.api.get().joinToString(" ") { it.name }
+            attributes["Main-Class"] = application.mainClassName
         }
-        from(configurations.compile.get().map { entry -> zipTree(entry) }) {
+        from(configurations.api.get().map { entry -> zipTree(entry) }) {
             exclude(
                 "META-INF/MANIFEST.MF",
                 "META-INF/*.SF",
                 "META-INF/*.DSA",
-                "META-INF/*.RSA")
+                "META-INF/*.RSA"
+            )
         }
 //        from("doc/assets")
     }

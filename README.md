@@ -21,3 +21,7 @@
 ##  现有问题
 
 ##  下一步改进
+
+
+##  最新版本
+1.  [v0.0.1](https://gitee.com/NingOpenSource/NetAssist-JVM/releases/0.0.1): 完成基本功能
