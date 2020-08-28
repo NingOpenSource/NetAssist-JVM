@@ -7,6 +7,7 @@ import javafx.stage.Stage
 import org.ning1994.net_assist.core.DescriptionProperties
 import tornadofx.App
 import tornadofx.imageview
+import java.io.File
 import java.io.FileInputStream
 import java.util.*
 import kotlin.system.exitProcess
@@ -19,12 +20,37 @@ class NetAssist : App(MainView::class, MainStyles::class) {
             }
         }
 
-        private val descriptionProperties=Properties().apply {
+        private val descriptionProperties = Properties().apply {
             this.load(NetAssist::class.java.getResourceAsStream("/discription.properties"))
         }
 
-        fun getDescription(description: DescriptionProperties):String{
+        fun getDescription(description: DescriptionProperties): String {
             return descriptionProperties.getProperty(description.key)
+        }
+
+        val userDir = File(System.getProperty("user.dir"))
+        private var workspaceDir: File? = null
+        private var cacheDir: File? = null
+        fun getWorkspaceDir(): File {
+            if (workspaceDir == null) {
+                workspaceDir = File(userDir, ".NetAssist-JVM").apply {
+                    if (!exists()) {
+                        mkdirs()
+                    }
+                }
+            }
+            return workspaceDir!!
+        }
+
+        fun getCacheDir(): File {
+            if (cacheDir == null) {
+                cacheDir = File(getWorkspaceDir(), "cache").apply {
+                    if (!exists()) {
+                        mkdirs()
+                    }
+                }
+            }
+            return cacheDir!!
         }
     }
 

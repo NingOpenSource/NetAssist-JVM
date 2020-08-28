@@ -16,12 +16,12 @@ import io.netty.handler.codec.bytes.ByteArrayEncoder
 import io.netty.handler.logging.LogLevel
 import io.netty.handler.logging.LoggingHandler
 import javafx.beans.property.*
-import org.ning1994.net_assist.core.LineSeparatorChar
-import org.ning1994.net_assist.core.ServiceStatus
-import org.ning1994.net_assist.core.SocketProtocol
+import org.ning1994.net_assist.core.*
 import org.ning1994.net_assist.utils.HexUtil
+import org.ning1994.net_assist.utils.OSUtil
 import tornadofx.observableListOf
 import tornadofx.runLater
+import java.io.File
 import java.net.InetSocketAddress
 import java.text.SimpleDateFormat
 
@@ -40,19 +40,80 @@ class MainViewModel {
         LineSeparatorChar("\\n\\r", "\n\r"),
         LineSeparatorChar("禁止换行", "")
     )
+
+    /**
+     * 换行符
+     */
     val lineSeparatorChar = SimpleObjectProperty(lineSeparatorCharList[0])
+    /**
+     * 日志缓存
+     */
     val receiveDataLogs = SimpleStringProperty("")
-    val periodicSendTimeMS = SimpleIntegerProperty(10)
+    /**
+     * 远程连接到本地服务端的客户端
+     */
     val remoteClientInfoList = SimpleListProperty<Channel>(observableListOf(arrayListOf()))
-    val remoteClientInfo = SimpleObjectProperty<Channel>()
+    /**
+     * 选中的远程客户端
+     */
+    val selectedRemoteClientInfo = SimpleObjectProperty<Channel>()
+    /**
+     * 是否打印时间信息
+     */
     val isPrintTimeInfo = SimpleBooleanProperty(false)
+    /**
+     * 是否暂停打印
+     */
     val isPrintPause = SimpleBooleanProperty(false)
+    /**
+     * 是否将接收到的数据打印为16进制
+     */
     val isPrintHexString = SimpleBooleanProperty(false)
+    /**
+     * 是否将填写的内容解析为16进制数据发送
+     */
     val isSendHexString = SimpleBooleanProperty(false)
-
+    /**
+     * 总共接收的数据总和（byte）
+     */
+    val totalReceiveDataSize = SimpleStringProperty("0")
+    /**
+     * 总共发送的数据总和（byte）
+     */
+    val totalSendDataSize = SimpleStringProperty("0")
+    /**
+     * 是否循环发送
+     */
+    val isSendLooperEnable = SimpleBooleanProperty(false)
+    /**
+     * 循环发送的间隔时间
+     */
+    val sendLooperIntervalMS = SimpleLongProperty(10)
+    /**
+     * 当前服务状态
+     */
     val serviceStatus = SimpleObjectProperty<ServiceStatus>(ServiceStatus.idle)
-
-    //    private val ioExecutor = SingleThreadQueueExecutor()
+    /**
+     * 记录接收原始数据的临时文件
+     */
+    private val rawReceiveFile = createTempFile("NetAssist-jvm", "receive.log", NetAssist.getCacheDir()).apply {
+        deleteOnExit()
+    }
+    /**
+     * 记录发送原始数据的临时文件
+     */
+    private val rawSendFile = createTempFile("NetAssist-jvm", "send.log", NetAssist.getCacheDir()).apply {
+        deleteOnExit()
+    }
+    /**
+     * 单线程同步执行的任务调度器
+     */
+    private val ioExecutor = SingleThreadQueueExecutor()
+    /**
+     * 循环发送是否已经开始
+     */
+    @Volatile
+    private var isSendLooperStarted = false
     /**
      * 用来接收进来的连接
      */
@@ -62,6 +123,9 @@ class MainViewModel {
      * 用来处理已经被接收的连接，一旦bossGroup接收到连接，就会把连接信息注册到workerGroup上
      */
     var workerGroup: EventLoopGroup? = null
+    /**
+     * 服务启动时获取的channel
+     */
     private var rootChannel: Channel? = null
 
     private fun initRootNettyChannel(ch: Channel?) {
@@ -102,7 +166,9 @@ class MainViewModel {
             addLast(ByteArrayDecoder())
             addLast(object : SimpleChannelInboundHandler<ByteArray>() {
                 override fun channelRead0(ctx: ChannelHandlerContext?, msg: ByteArray?) {
-                    log(ctx?.channel()!!, msg!!)
+                    log(true, ctx?.channel()!!, msg!!)
+                    rawReceiveFile.appendBytes(msg)
+                    flushRawFile()
                 }
             })
             addLast(object : SimpleChannelInboundHandler<DatagramPacket>() {
@@ -110,11 +176,14 @@ class MainViewModel {
                     val byteBuf = msg?.content()
                     val bytes = ByteArray(byteBuf!!.readableBytes())
                     byteBuf.readBytes(bytes)
-                    log(ch, bytes)
+                    log(true, ch, bytes)
+                    rawReceiveFile.appendBytes(bytes)
+                    flushRawFile()
                 }
             })
             addLast(object : LoggingHandler(LogLevel.DEBUG) {
                 override fun exceptionCaught(ctx: ChannelHandlerContext?, cause: Throwable?) {
+                    @Suppress("DEPRECATION")
                     super.exceptionCaught(ctx, cause)
                     throwableCallback(cause!!)
                 }
@@ -126,15 +195,22 @@ class MainViewModel {
 
                 override fun channelInactive(ctx: ChannelHandlerContext?) {
                     super.channelInactive(ctx)
+                    ch.also { channel->
+                        println("$channel is disconnected")
+                        //检查是否有循环发送的任务，停止它
+                        if (channel ==findCurrentChannel() && isSendLooperEnable.value && isSendLooperStarted) {
+                            sendLoopStop()
+                        }
+                    }
                     inactiveCallback()
                 }
             })
         }
     }
 
-    private fun log(channel: Channel, message: ByteArray) {
+    private fun log(isReceiver: Boolean, channel: Channel, message: ByteArray) {
         log(
-            channel, if (isPrintHexString.value) {
+            channel, if (isPrintHexString.value && isReceiver) {
                 HexUtil.encode(message)!!
             } else {
                 String(message)
@@ -151,12 +227,16 @@ class MainViewModel {
             } else {
                 ""
             }
-            if (channel is DatagramChannel) {
-                receiveDataLogs.value += "[UDP ${channel.localAddress()}]$timeInfo\n$message\n"
-            } else if (channel is NioServerSocketChannel) {
-                receiveDataLogs.value += "[Local ${channel.localAddress()}]$timeInfo\n$message\n"
-            } else {
-                receiveDataLogs.value += "[Remote ${channel.remoteAddress()}]$timeInfo\n$message\n"
+            when (channel) {
+                is DatagramChannel -> {
+                    receiveDataLogs.value += "[UDP ${channel.localAddress()}]$timeInfo\n$message\n"
+                }
+                is NioServerSocketChannel -> {
+                    receiveDataLogs.value += "[Local ${channel.localAddress()}]$timeInfo\n$message\n"
+                }
+                else -> {
+                    receiveDataLogs.value += "[Remote ${channel.remoteAddress()}]$timeInfo\n$message\n"
+                }
             }
         }
     }
@@ -233,8 +313,14 @@ class MainViewModel {
         }
         channelFuture.addListener {
             println("start: isDone=${it.isDone}, isSuccess=${it.isSuccess}, isCancelled=${it.isCancelled}, isCancellable=${it.isCancellable}")
+            if(it.isDone&&it.isSuccess){
+                println("启动成功！...")
+            }else{
+                println("启动失败！...")
+                log(channelFuture.channel(),"启动失败！...")
+                serviceStatus.value = ServiceStatus.idle
+            }
         }
-        println("启动成功！...")
     }
 
     fun stop() {
@@ -245,22 +331,29 @@ class MainViewModel {
         workerGroup?.shutdownGracefully()
     }
 
-
-    fun send(data: String): ChannelFuture? {
-        if (isSendHexString.value) {
-            return send(HexUtil.decode(data)!!)
-        }
-        return send(data.toByteArray())
+    fun send(data: String, onEnd: () -> Unit = {}) {
+        _send(data, onEnd)
     }
 
-    fun send(data: ByteArray): ChannelFuture? {
-        val channel =
-            if (socketProtocol.value == SocketProtocol.tcpServer) {
-                remoteClientInfo.value
-            } else {
-                rootChannel
-            }
-        return if (socketProtocol.value == SocketProtocol.udp) {
+    fun send(data: ByteArray, onEnd: () -> Unit = {}) {
+        _send(data, onEnd)
+    }
+
+    fun send(data: File, onEnd: () -> Unit = {}) {
+        _send(data, onEnd)
+    }
+
+    private fun findCurrentChannel(): Channel? {
+        return if (socketProtocol.value == SocketProtocol.tcpServer) {
+            selectedRemoteClientInfo.value
+        } else {
+            rootChannel
+        }
+    }
+
+    private fun sendSync(data: ByteArray) {
+        val channel = findCurrentChannel()
+        if (socketProtocol.value == SocketProtocol.udp) {
             channel?.writeAndFlush(
                 DatagramPacket(
                     Unpooled.wrappedBuffer(data),
@@ -269,8 +362,82 @@ class MainViewModel {
             )
         } else {
             channel?.writeAndFlush(data)
-        }?.apply {
-            log(rootChannel!!, data)
+        }?.sync().apply {
+            rawSendFile.appendBytes(data)
+            flushRawFile()
+            log(false, rootChannel!!, data)
+        }
+    }
+
+    private fun flushRawFile() {
+        totalReceiveDataSize.value = rawReceiveFile.length().toString()
+        totalSendDataSize.value = rawSendFile.length().toString()
+    }
+
+    fun clearTotalDataSize() {
+        rawSendFile.writeText("")
+        rawReceiveFile.writeText("")
+        flushRawFile()
+    }
+
+    fun sendLoopStart(data: String, onEnd: () -> Unit) {
+        _sendLoopStart(data, onEnd)
+    }
+
+    fun sendLoopStart(data: ByteArray, onEnd: () -> Unit) {
+        _sendLoopStart(data, onEnd)
+    }
+
+    fun sendLoopStart(data: File, onEnd: () -> Unit) {
+        _sendLoopStart(data, onEnd)
+    }
+
+    fun sendLoopStop() {
+        if (isSendLooperEnable.value && isSendLooperStarted) {
+            isSendLooperStarted = false
+        }
+    }
+
+    private fun _sendLoopStart(data: Any, onEnd: () -> Unit) {
+        if (isSendLooperEnable.value && !isSendLooperStarted) {
+            isSendLooperStarted = true
+            _send(data, onEnd)
+        }
+    }
+
+    private fun _send(data: Any, onEnd: () -> Unit) {
+        ioExecutor.execute {
+            val byteArray = if (data is String) {
+                //替换换行符
+                val text = data.replace(
+                    OSUtil.LINE_SEPARATOR_CHAR,
+                    lineSeparatorChar.value.value
+                )
+                if (isSendHexString.value) {
+                    HexUtil.decode(text)!!
+                } else {
+                    text.toByteArray()
+                }
+            } else if (data is ByteArray) {
+                data
+            } else if (data is File) {
+                data.readBytes()
+            } else {
+                null
+            }
+            if (byteArray == null) {
+                runLater(onEnd)
+            } else {
+                if (isSendLooperEnable.value) {
+                    while (isSendLooperStarted) {
+                        sendSync(byteArray)
+                        Thread.sleep(sendLooperIntervalMS.value)
+                    }
+                } else {
+                    sendSync(byteArray)
+                }
+                runLater(onEnd)
+            }
         }
     }
 }

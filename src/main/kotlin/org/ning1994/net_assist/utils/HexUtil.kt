@@ -5,7 +5,7 @@ object HexUtil {
      * 字节流转成十六进制表示
      */
     fun encode(src: ByteArray): String? {
-        var strHex = ""
+        var strHex: String
         val sb = StringBuilder("")
         for (n in src.indices) {
             strHex = Integer.toHexString(src[n].toInt() and 0xFF)
@@ -18,8 +18,8 @@ object HexUtil {
      * 字符串转成字节流
      */
     fun decode(src: String): ByteArray? {
-        var m = 0
-        var n = 0
+        var m: Int
+        var n: Int
         val byteLen = src.length / 2 // 每两个字符描述一个字节
         val ret = ByteArray(byteLen)
         for (i in 0 until byteLen) {
