@@ -96,13 +96,13 @@ class MainViewModel {
     /**
      * 记录接收原始数据的临时文件
      */
-    private val rawReceiveFile = createTempFile("NetAssist-jvm", "receive.log", NetAssist.getCacheDir()).apply {
+    private val rawReceiveFile = createTempFile("NetAssist-jvm_", "_receive.log", NetAssist.getCacheDir()).apply {
         deleteOnExit()
     }
     /**
      * 记录发送原始数据的临时文件
      */
-    private val rawSendFile = createTempFile("NetAssist-jvm", "send.log", NetAssist.getCacheDir()).apply {
+    private val rawSendFile = createTempFile("NetAssist-jvm_", "_send.log", NetAssist.getCacheDir()).apply {
         deleteOnExit()
     }
     /**

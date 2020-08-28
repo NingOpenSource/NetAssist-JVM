@@ -11,3 +11,4 @@
 /build/
 .idea_modules/
 .DS_Store
+.NetAssist-JVM/

@@ -157,7 +157,7 @@ class MainView :
                                                     listOf("*.txt")
                                                 )
                                             ),
-                                            initialDirectory = NetAssist.userDir,
+                                            initialDirectory = NetAssist.userHomeDir,
                                             mode = FileChooserMode.Save
                                         ).apply {
                                             if (isNotEmpty()) {

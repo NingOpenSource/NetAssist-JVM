@@ -8,7 +8,6 @@ import org.ning1994.net_assist.core.DescriptionProperties
 import tornadofx.App
 import tornadofx.imageview
 import java.io.File
-import java.io.FileInputStream
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -28,12 +27,12 @@ class NetAssist : App(MainView::class, MainStyles::class) {
             return descriptionProperties.getProperty(description.key)
         }
 
-        val userDir = File(System.getProperty("user.dir"))
+        val userHomeDir = File(System.getProperty("user.home"))
         private var workspaceDir: File? = null
         private var cacheDir: File? = null
         fun getWorkspaceDir(): File {
             if (workspaceDir == null) {
-                workspaceDir = File(userDir, ".NetAssist-JVM").apply {
+                workspaceDir = File(userHomeDir, ".NetAssist-JVM").apply {
                     if (!exists()) {
                         mkdirs()
                     }
@@ -60,7 +59,6 @@ class NetAssist : App(MainView::class, MainStyles::class) {
             stop()
         }
     }
-
     override fun stop() {
         super.stop()
         System.gc()
