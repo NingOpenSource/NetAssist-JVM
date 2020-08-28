@@ -45,75 +45,92 @@ class MainViewModel {
      * 换行符
      */
     val lineSeparatorChar = SimpleObjectProperty(lineSeparatorCharList[0])
+
     /**
      * 日志缓存
      */
     val receiveDataLogs = SimpleStringProperty("")
+
     /**
      * 远程连接到本地服务端的客户端
      */
     val remoteClientInfoList = SimpleListProperty<Channel>(observableListOf(arrayListOf()))
+
     /**
      * 选中的远程客户端
      */
     val selectedRemoteClientInfo = SimpleObjectProperty<Channel>()
+
     /**
      * 是否打印时间信息
      */
     val isPrintTimeInfo = SimpleBooleanProperty(false)
+
     /**
      * 是否暂停打印
      */
     val isPrintPause = SimpleBooleanProperty(false)
+
     /**
      * 是否将接收到的数据打印为16进制
      */
     val isPrintHexString = SimpleBooleanProperty(false)
+
     /**
      * 是否将填写的内容解析为16进制数据发送
      */
     val isSendHexString = SimpleBooleanProperty(false)
+
     /**
      * 总共接收的数据总和（byte）
      */
     val totalReceiveDataSize = SimpleStringProperty("0")
+
     /**
      * 总共发送的数据总和（byte）
      */
     val totalSendDataSize = SimpleStringProperty("0")
+
     /**
      * 是否循环发送
      */
     val isSendLooperEnable = SimpleBooleanProperty(false)
+
     /**
      * 循环发送的间隔时间
      */
     val sendLooperIntervalMS = SimpleLongProperty(10)
+
     /**
      * 当前服务状态
      */
     val serviceStatus = SimpleObjectProperty<ServiceStatus>(ServiceStatus.idle)
+
     /**
      * 记录接收原始数据的临时文件
      */
     private val rawReceiveFile = createTempFile("NetAssist-jvm_", "_receive.log", NetAssist.getCacheDir()).apply {
         deleteOnExit()
     }
+
     /**
      * 记录发送原始数据的临时文件
      */
     private val rawSendFile = createTempFile("NetAssist-jvm_", "_send.log", NetAssist.getCacheDir()).apply {
         deleteOnExit()
     }
+
     /**
      * 单线程同步执行的任务调度器
      */
     private val ioExecutor = SingleThreadQueueExecutor()
+
     /**
      * 循环发送是否已经开始
      */
     @Volatile
     private var isSendLooperStarted = false
+
     /**
      * 用来接收进来的连接
      */
@@ -123,6 +140,7 @@ class MainViewModel {
      * 用来处理已经被接收的连接，一旦bossGroup接收到连接，就会把连接信息注册到workerGroup上
      */
     var workerGroup: EventLoopGroup? = null
+
     /**
      * 服务启动时获取的channel
      */
@@ -195,10 +213,10 @@ class MainViewModel {
 
                 override fun channelInactive(ctx: ChannelHandlerContext?) {
                     super.channelInactive(ctx)
-                    ch.also { channel->
+                    ch.also { channel ->
                         println("$channel is disconnected")
                         //检查是否有循环发送的任务，停止它
-                        if (channel ==findCurrentChannel() && isSendLooperEnable.value && isSendLooperStarted) {
+                        if (channel == findCurrentChannel() && isSendLooperEnable.value && isSendLooperStarted) {
                             sendLoopStop()
                         }
                     }
@@ -210,7 +228,9 @@ class MainViewModel {
 
     private fun log(isReceiver: Boolean, channel: Channel, message: ByteArray) {
         log(
-            channel, if (isPrintHexString.value && isReceiver) {
+            channel, if ((isPrintHexString.value && isReceiver)
+                || (isSendHexString.value && !isReceiver)
+            ) {
                 HexUtil.encode(message)!!
             } else {
                 String(message)
@@ -313,11 +333,11 @@ class MainViewModel {
         }
         channelFuture.addListener {
             println("start: isDone=${it.isDone}, isSuccess=${it.isSuccess}, isCancelled=${it.isCancelled}, isCancellable=${it.isCancellable}")
-            if(it.isDone&&it.isSuccess){
+            if (it.isDone && it.isSuccess) {
                 println("启动成功！...")
-            }else{
+            } else {
                 println("启动失败！...")
-                log(channelFuture.channel(),"启动失败！...")
+                log(channelFuture.channel(), "启动失败！...")
                 serviceStatus.value = ServiceStatus.idle
             }
         }
