@@ -238,12 +238,12 @@ class MainViewModel {
         )
     }
 
-    private val printDateFormate = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+    private val printDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
     private fun log(channel: Channel, message: String) {
         if (isPrintPause.value) return
         runLater {
             val timeInfo = if (isPrintTimeInfo.value) {
-                "：${printDateFormate.format(System.currentTimeMillis())}"
+                "：${printDateFormat.format(System.currentTimeMillis())}"
             } else {
                 ""
             }
