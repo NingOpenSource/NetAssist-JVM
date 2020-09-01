@@ -1,0 +1,27 @@
+apply plugin: "org.openjfx.javafxplugin"
+apply plugin: "org.beryx.jlink"
+//noinspection GrUnresolvedAccess
+javafx {
+    version = "14.0.2.1"
+    modules = ["javafx.base", "javafx.controls", "javafx.fxml", "javafx.web", "javafx.media", "javafx.swing", "javafx.graphics"]
+    configuration = "api"
+}
+
+//sourceSets.main.java.srcDirs=["module-info"]
+println("merged.module -> build/jlinkbase/tmpjars/${group}.merged.module/")
+
+
+//noinspection GrUnresolvedAccess
+jlink {
+    //noinspection GrUnresolvedAccess
+    launcher {
+        name = 'NetAssistJVM'
+        args=['-splash=src/main/resources/ic_launcher.png']
+        addExtraDependencies("javafx")
+    }
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_14
+}
+

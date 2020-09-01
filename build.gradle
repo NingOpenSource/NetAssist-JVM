@@ -1,0 +1,98 @@
+import org.gradle.internal.os.OperatingSystem
+
+buildscript {
+    ext {
+        //noinspection GroovyAssignabilityCheck
+        currentOS = OperatingSystem.current()
+        isRunningInIdea = Boolean.parseBoolean(System.getProperty("idea.active"))
+        isSupportJavaModule = Float.parseFloat(System.getProperty("java.specification.version")) > 1.8
+    }
+    repositories {
+        maven {
+            url "https://maven.aliyun.com/repository/gradle-plugin"
+        }
+        google {
+            setUrl("https://maven.aliyun.com/repository/google")
+        }
+        jcenter {
+            setUrl("https://maven.aliyun.com/repository/public")
+        }
+        mavenCentral {
+            url "https://maven.aliyun.com/repository/central"
+        }
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+        if (isSupportJavaModule) {
+            classpath 'org.openjfx:javafx-plugin:0.0.9'
+            classpath 'org.beryx:badass-jlink-plugin:2.21.2'
+        }
+    }
+}
+
+apply plugin: "kotlin"
+apply plugin: "application"
+if (isSupportJavaModule) {
+    apply from: "build-java-modules.gradle"
+}
+def descriptionProperties = new Properties() {
+    {
+        load(new FileInputStream(new File("src/main/resources/discription.properties")))
+    }
+}
+
+group = "org.ning1994.net_assist"
+version = descriptionProperties.get("version.name")
+
+repositories {
+    google {
+        url "https://maven.aliyun.com/repository/google"
+    }
+    jcenter {
+        url "https://maven.aliyun.com/repository/public"
+    }
+    mavenCentral {
+        url "https://maven.aliyun.com/repository/central"
+    }
+}
+application {
+    mainClassName = "org.ning1994.net_assist.NetAssist"
+}
+
+dependencies {
+    api("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
+    api("no.tornado:tornadofx:1.7.20")
+    api("io.netty:netty-all:4.1.51.Final")
+    testImplementation("junit:junit:4.12")
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+}
+configurations {
+    api {
+        setCanBeConsumed(true)
+        setCanBeResolved(true)
+    }
+}
+compileKotlin {
+    kotlinOptions.jvmTarget = "1.8"
+}
+jar {
+    manifest {
+        attributes(
+                "Class-Path": configurations.api.collect { it.getName() }.join(" "),
+                "Main-Class": mainClassName
+        )
+    }
+    from(configurations.api.collect { entry -> zipTree(entry) }) {
+        exclude "META-INF/MANIFEST.MF"
+        exclude "META-INF/*.SF"
+        exclude "META-INF/*.DSA"
+        exclude "META-INF/*.RSA"
+    }
+//    println("\n\n\n------------->"+configurations.api.collect { entry -> zipTree(entry) }+"\n\n\n")
+
+//    from("doc/assets")
+}
+
