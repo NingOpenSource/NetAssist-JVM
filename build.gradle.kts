@@ -16,19 +16,12 @@ plugins {
     java
     application
     kotlin("jvm") version "1.3.72"
-    if (RuntimeUtlis.isSupportModuleVM){
-        id("org.openjfx.javafxplugin") version "0.0.9"
-    }
 }
 
-if (RuntimeUtlis.isSupportModuleVM){
-    configurations["javafx"].apply {
-    }
-}
 
-System.getProperties().forEach { t, u ->
-    println("RuntimeUtlis---> $t = $u")
-}
+//System.getProperties().forEach { t, u ->
+//    println("RuntimeUtlis---> $t = $u")
+//}
 
 val descriptionProperties = Properties().apply {
     load(FileInputStream(File("src/main/resources/discription.properties")))

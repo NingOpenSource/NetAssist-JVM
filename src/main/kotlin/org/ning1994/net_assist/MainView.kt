@@ -215,7 +215,7 @@ class MainView :
                                             chooseFile(
                                                 "请选择需要发送的文件（最大支持${Int.MAX_VALUE / 1024 / 1024}MB）",
                                                 filters = arrayOf(/*FileChooser.ExtensionFilter("压缩包", listOf("*.zip"))*/),
-                                                initialDirectory = File(System.getProperty("user.dir")),
+                                                initialDirectory = File(System.getProperty("user.home")),
                                                 mode = FileChooserMode.Single
                                             ).apply {
                                                 if (isNotEmpty()) {
