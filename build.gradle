@@ -5,7 +5,7 @@ buildscript {
         //noinspection GroovyAssignabilityCheck
         currentOS = OperatingSystem.current()
         isRunningInIdea = Boolean.parseBoolean(System.getProperty("idea.active"))
-        isSupportJavaModule = Float.parseFloat(System.getProperty("java.specification.version")) > 1.8
+        isSupportJavaModule = JavaVersion.current().toString().toFloat() > 1.8
     }
     repositories {
         maven {
@@ -57,26 +57,33 @@ repositories {
 }
 application {
     mainClassName = "org.ning1994.net_assist.NetAssist"
+    mainModule.set("org.ning1994.net_assist")
 }
 
 dependencies {
     api("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
-    api("no.tornado:tornadofx:1.7.20")
+    api("org.jetbrains.kotlin:kotlin-reflect:$kotlin_version")
+    api("no.tornado:tornadofx:1.7.20") {
+        exclude group: "org.jetbrains.kotlin"
+        exclude group: "org.glassfish"
+    }
     api("io.netty:netty-all:4.1.51.Final")
     testImplementation("junit:junit:4.12")
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
+    sourceCompatibility = JavaVersion.current()
 }
+
 configurations {
     api {
         setCanBeConsumed(true)
         setCanBeResolved(true)
     }
 }
+
 compileKotlin {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = JavaVersion.current().toString()
 }
 jar {
     manifest {
@@ -95,4 +102,3 @@ jar {
 
 //    from("doc/assets")
 }
-

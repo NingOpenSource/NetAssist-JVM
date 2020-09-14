@@ -1,27 +1,49 @@
 apply plugin: "org.openjfx.javafxplugin"
 apply plugin: "org.beryx.jlink"
+
+
+sourceSets{
+    main{
+        java {
+            srcDirs "src-modules"
+        }
+    }
+}
+
 //noinspection GrUnresolvedAccess
 javafx {
-    version = "14.0.2.1"
+    version = "14.0.2"
     modules = ["javafx.base", "javafx.controls", "javafx.fxml", "javafx.web", "javafx.media", "javafx.swing", "javafx.graphics"]
-    configuration = "api"
+//    configuration = "api"
 }
 
 //sourceSets.main.java.srcDirs=["module-info"]
-println("merged.module -> build/jlinkbase/tmpjars/${group}.merged.module/")
+//println("merged.module -> build/jlinkbase/tmpjars/${group}.merged.module/")
 
+compileJava.destinationDir(compileKotlin.destinationDir)
 
 //noinspection GrUnresolvedAccess
 jlink {
     //noinspection GrUnresolvedAccess
     launcher {
+        addExtraDependencies("javafx")
+        addExtraDependencies("tornadofx")
+        addExtraDependencies("kotlin")
+        addExtraDependencies("netty-all")
         name = 'NetAssistJVM'
         args=['-splash=src/main/resources/ic_launcher.png']
-        addExtraDependencies("javafx")
+        imageZip.set(project.file("${project.buildDir}/image-zip/$name-image.zip"))
     }
 }
 
 java {
     sourceCompatibility = JavaVersion.VERSION_14
+}
+
+//noinspection GroovyAssignabilityCheck
+plugins.withType(JavaPlugin).configureEach {
+    java {
+        modularity.inferModulePath = true
+    }
 }
 
