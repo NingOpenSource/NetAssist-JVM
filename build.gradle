@@ -5,7 +5,7 @@ buildscript {
         //noinspection GroovyAssignabilityCheck
         currentOS = OperatingSystem.current()
         isRunningInIdea = Boolean.parseBoolean(System.getProperty("idea.active"))
-        isSupportJavaModule = JavaVersion.current().toString().toFloat() > 1.8
+        isSupportJavaModule = JavaVersion.current().toString().toFloat() > 1.8 || JavaVersion.current().isJava10()
     }
     repositories {
         maven {
@@ -32,9 +32,6 @@ buildscript {
 
 apply plugin: "kotlin"
 apply plugin: "application"
-if (isSupportJavaModule) {
-    apply from: "build-java-modules.gradle"
-}
 def descriptionProperties = new Properties() {
     {
         load(new FileInputStream(new File("src/main/resources/discription.properties")))
@@ -44,6 +41,15 @@ def descriptionProperties = new Properties() {
 group = "org.ning1994.net_assist"
 version = descriptionProperties.get("version.name")
 
+application {
+    mainClassName = "org.ning1994.net_assist.Launcher"
+}
+
+if (isSupportJavaModule) {
+    apply from: "build-java-modules.gradle"
+} else {
+    apply from: "build-java.gradle"
+}
 repositories {
     google {
         url "https://maven.aliyun.com/repository/google"
@@ -55,10 +61,6 @@ repositories {
         url "https://maven.aliyun.com/repository/central"
     }
 }
-application {
-    mainClassName = "org.ning1994.net_assist.NetAssist"
-    mainModule.set("org.ning1994.net_assist")
-}
 
 dependencies {
     api("org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version")
@@ -68,11 +70,20 @@ dependencies {
         exclude group: "org.glassfish"
     }
     api("io.netty:netty-all:4.1.51.Final")
-    testImplementation("junit:junit:4.12")
+//    testImplementation("junit:junit:4.12")
 }
 
-java {
-    sourceCompatibility = JavaVersion.current()
+
+compileKotlin {
+    String jvmTargetString=JavaVersion.current().toString()
+    if (JavaVersion.current().isJava10()){
+        jvmTargetString="10"
+        println("不支持java10")
+    }else if (JavaVersion.current().isJava9()){
+        jvmTargetString="9"
+        println("不支持java9")
+    }
+    kotlinOptions.jvmTarget = jvmTargetString
 }
 
 configurations {
@@ -81,24 +92,38 @@ configurations {
         setCanBeResolved(true)
     }
 }
-
-compileKotlin {
-    kotlinOptions.jvmTarget = JavaVersion.current().toString()
-}
-jar {
+task runnableJar(type:Jar,dependsOn: [jar],group: "build"){
     manifest {
         attributes(
-                "Class-Path": configurations.api.collect { it.getName() }.join(" "),
+                "Manifest-Version": project.version,
+//                "Class-Path": configurations.api.collect { it.getName() }.join(" "),
                 "Main-Class": mainClassName
         )
     }
-    from(configurations.api.collect { entry -> zipTree(entry) }) {
+    def sourceTree = configurations.api.collect { entry -> zipTree(entry) }
+    sourceTree.add(zipTree(jar.archiveFile.get().asFile))//加入项目源码编译后的jar
+    from(sourceTree) {
         exclude "META-INF/MANIFEST.MF"
         exclude "META-INF/*.SF"
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
     }
-//    println("\n\n\n------------->"+configurations.api.collect { entry -> zipTree(entry) }+"\n\n\n")
+//    def moduleInfoFile=file("$buildDir/classes/merged/module-info.class")
+//    if (moduleInfoFile.exists()){
+//        from(moduleInfoFile)//增加module-info.java
+//    }
 
-//    from("doc/assets")
+//    def launcherFile=file("$buildDir/classes/merged/Launcher.class")
+//    if (launcherFile.exists()){
+//        from(launcherFile)//增加Launcher.java
+//    }
+    archiveName("${archiveBaseName.get()}-${JavaVersion.current().toString()}-v${archiveVersion.get()}.${archiveExtension.get()}")
+    destinationDir(file("out/runnableJar"))
 }
+
+//task runJar(dependsOn: [runnableJar],group: "application") {
+//    doLast {
+//        ant.java(jar:runnableJar.getArchiveFile().get().asFile,fork:true)
+//    }
+//}
+

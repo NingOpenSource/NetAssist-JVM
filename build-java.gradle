@@ -1,0 +1,35 @@
+//sourceSets {
+//    main {
+//        java {
+//            exclude 'module-info.java'//java9以下排除module-info.java文件
+//        }
+//    }
+//    mainModuleInfo{
+//        java {
+//            srcDirs = ['src/main/java']
+//            outputDir = file("$buildDir/classes/java/main")
+//            include 'module-info.java'
+//        }
+//    }
+//}
+//
+//classes.dependsOn mainModuleInfoClasses
+//
+//compileJava.options.compilerArgs.addAll(['--release', '8'])
+//compileMainModuleInfoJava.options.compilerArgs.addAll(['--release', '9'])
+
+java {
+    sourceCompatibility = JavaVersion.current()
+    modularity.inferModulePath = false
+}
+
+//dependencies {
+//    ["linux", "win", "mac"].each { osType ->
+//        ["javafx.base", "javafx.controls", "javafx.fxml", "javafx.web", "javafx.media", "javafx.swing", "javafx.graphics"]
+//                .collect { it.replace(".", "-") }
+//                .each { moduleName ->
+//                    println("================================$moduleName")
+//                    implementation "org.openjfx:$moduleName:15"
+//                }
+//    }
+//}
