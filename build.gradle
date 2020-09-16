@@ -70,17 +70,16 @@ dependencies {
         exclude group: "org.glassfish"
     }
     api("io.netty:netty-all:4.1.51.Final")
-//    testImplementation("junit:junit:4.12")
 }
 
 
 compileKotlin {
-    String jvmTargetString=JavaVersion.current().toString()
-    if (JavaVersion.current().isJava10()){
-        jvmTargetString="10"
+    String jvmTargetString = JavaVersion.current().toString()
+    if (JavaVersion.current().isJava10()) {
+        jvmTargetString = "10"
         println("不支持java10")
-    }else if (JavaVersion.current().isJava9()){
-        jvmTargetString="9"
+    } else if (JavaVersion.current().isJava9()) {
+        jvmTargetString = "9"
         println("不支持java9")
     }
     kotlinOptions.jvmTarget = jvmTargetString
@@ -92,7 +91,7 @@ configurations {
         setCanBeResolved(true)
     }
 }
-task runnableJar(type:Jar,dependsOn: [jar],group: "build"){
+task runnableJar(type: Jar, dependsOn: [jar], group: "build") {
     manifest {
         attributes(
                 "Manifest-Version": project.version,
@@ -108,22 +107,7 @@ task runnableJar(type:Jar,dependsOn: [jar],group: "build"){
         exclude "META-INF/*.DSA"
         exclude "META-INF/*.RSA"
     }
-//    def moduleInfoFile=file("$buildDir/classes/merged/module-info.class")
-//    if (moduleInfoFile.exists()){
-//        from(moduleInfoFile)//增加module-info.java
-//    }
-
-//    def launcherFile=file("$buildDir/classes/merged/Launcher.class")
-//    if (launcherFile.exists()){
-//        from(launcherFile)//增加Launcher.java
-//    }
     archiveName("${archiveBaseName.get()}-${JavaVersion.current().toString()}-v${archiveVersion.get()}.${archiveExtension.get()}")
     destinationDir(file("out/runnableJar"))
 }
-
-//task runJar(dependsOn: [runnableJar],group: "application") {
-//    doLast {
-//        ant.java(jar:runnableJar.getArchiveFile().get().asFile,fork:true)
-//    }
-//}
 

@@ -1,26 +1,17 @@
-//sourceSets {
-//    main {
-//        java {
-//            exclude 'module-info.java'//java9以下排除module-info.java文件
-//        }
-//    }
-//    mainModuleInfo{
-//        java {
-//            srcDirs = ['src/main/java']
-//            outputDir = file("$buildDir/classes/java/main")
-//            include 'module-info.java'
-//        }
-//    }
-//}
-//
-//classes.dependsOn mainModuleInfoClasses
-//
-//compileJava.options.compilerArgs.addAll(['--release', '8'])
-//compileMainModuleInfoJava.options.compilerArgs.addAll(['--release', '9'])
+sourceSets {
+    main {
+        java {
+            exclude 'module-info.java'//java9以下排除module-info.java文件
+        }
+    }
+}
 
 java {
     sourceCompatibility = JavaVersion.current()
     modularity.inferModulePath = false
+}
+kotlin {
+    sourceCompatibility==JavaVersion.current()
 }
 
 //dependencies {

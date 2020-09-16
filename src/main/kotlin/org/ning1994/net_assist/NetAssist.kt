@@ -51,6 +51,7 @@ class NetAssist : App(MainView::class, MainStyles::class) {
             }
             return cacheDir!!
         }
+
     }
 
     override fun start(stage: Stage) {

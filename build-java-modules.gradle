@@ -1,22 +1,5 @@
 apply plugin: "org.openjfx.javafxplugin"
 apply plugin: "org.beryx.jlink"
-sourceSets {
-    main {
-        java {
-            include('src/main/module-info.java')
-            include('src/main/java/org/ning1994.net_assist/Launcher.java')
-//            exclude 'module-info.java'//java9以下排除module-info.java文件
-        }
-    }
-//    mainModuleInfo{
-//        java {
-//            srcDirs = ['src/mainModuleInfo/java']
-//            outputDir = file("$buildDir/classes/java/main")
-////            include 'module-info.java'
-//        }
-//    }
-}
-//classes.dependsOn mainModuleInfoClasses
 
 application {
     mainModule.set("org.ning1994.net_assist")
@@ -24,7 +7,6 @@ application {
 }
 startScripts {
     outputDir = file("build/out")
-//        classpath = files('')
 }
 
 def javaFxSdkVersion="15"
@@ -35,11 +17,6 @@ javafx {
     modules = ["javafx.base", "javafx.controls", "javafx.fxml", "javafx.web", "javafx.media", "javafx.swing", "javafx.graphics"]
     configuration = "api"
 }
-
-//sourceSets.main.java.srcDirs=["module-info"]
-//println("merged.module -> build/jlinkbase/tmpjars/${group}.merged.module/")
-
-compileJava.destinationDir(compileKotlin.destinationDir)
 
 java {
     sourceCompatibility = JavaVersion.current()
@@ -60,18 +37,3 @@ jlink {
         imageZip.set(project.file("${project.buildDir}/image-zip/$name-image.zip"))
     }
 }
-//dependencies {
-//    ["linux", "win","mac"].each {osType->
-//        javafx.modules.collect {it.replace(".","-")}.each {moduleName->
-//            api "org.openjfx:$moduleName:$javaFxSdkVersion:$osType"
-//        }
-//    }
-//}
-
-
-//jar{
-//    def launcherFile=file("$buildDir/classes/merged/Launcher.class")
-//    if (launcherFile.exists()){
-//        from(launcherFile)//增加Launcher.java
-//    }
-//}
