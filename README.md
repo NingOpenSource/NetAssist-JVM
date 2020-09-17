@@ -6,7 +6,7 @@
 ![shot.jpg](doc/image/QQ20200828-161701@2x.png)
 
 ##  运行环境
-含有javafx的jre8
+含有javafx的jre8,`java11+`,不支持`java9`和`java10`
 
 ##  功能说明
 1.  UDP 数据收发
